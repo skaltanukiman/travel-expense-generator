@@ -227,11 +227,24 @@ function setFormulaCachedValue(sheetXml: string, address: string, value: string 
   if (!current.includes("<f")) {
     throw new Error(`数式セルではありません: ${address}`);
   }
+  const openingTag = /^<c\b[^>]*>/u.exec(current)?.[0];
+  if (!openingTag) {
+    throw new Error(`数式セルの開始タグが不正です: ${address}`);
+  }
+  const typedOpeningTag = setOpeningTagType(openingTag, typeof value === "string" ? "str" : null);
   const cachedValue = `<v>${encodeXml(String(value))}</v>`;
-  const replacement = /<v\b[^>]*>[\s\S]*?<\/v>/u.test(current)
-    ? current.replace(/<v\b[^>]*>[\s\S]*?<\/v>/u, cachedValue)
-    : current.replace("</c>", `${cachedValue}</c>`);
+  const typedCell = `${typedOpeningTag}${current.slice(openingTag.length)}`;
+  const replacement = /<v\b[^>]*>[\s\S]*?<\/v>/u.test(typedCell)
+    ? typedCell.replace(/<v\b[^>]*>[\s\S]*?<\/v>/u, cachedValue)
+    : typedCell.replace("</c>", `${cachedValue}</c>`);
   return `${sheetXml.slice(0, span.start)}${replacement}${sheetXml.slice(span.end)}`;
+}
+
+function setOpeningTagType(openingTag: string, type: string | null): string {
+  const withoutType = openingTag.replace(/\s+t="[^"]*"/u, "");
+  return type === null
+    ? withoutType
+    : withoutType.replace(/>$/u, ` t="${encodeXml(type)}">`);
 }
 
 function findCell(sheetXml: string, address: string): string | null {

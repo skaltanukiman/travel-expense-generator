@@ -45,6 +45,7 @@ describe("generateExpenseWorkbook", () => {
       expect(outputTraffic).toContain('r="C9" s="1" t="inlineStr"');
       expect(outputTraffic).toContain("電車");
       expect(outputTraffic).toContain("<v>3660</v>");
+      expect(outputTraffic).toContain('<c r="C33" s="1" t="str"><f>L6</f><v>テスト</v></c>');
       validateTemplate(outputTraffic);
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -106,7 +107,7 @@ function createTemplateEntries(): ZipEntry[] {
       }).join("");
     }),
     '<c r="P30" s="1"><f>SUM(P9:Q28)</f><v>3560</v></c>',
-    '<c r="C33" s="1" t="str"><f>L6</f><v>旧氏名</v></c>',
+    '<c r="C33" s="1"><f>L6</f><v>0</v></c>',
   ].join("");
   const traffic = [
     '<?xml version="1.0" encoding="UTF-8"?>',
