@@ -1,0 +1,18 @@
+{
+  "templatePath": "C:\\path\\to\\交通費精算書テンプレート.xlsx",
+  "inputDirectory": "C:\\path\\to\\downloaded-receipts",
+  "outputDirectory": "./outputs",
+  "sheetName": "交通費",
+  "department": "所属名",
+  "employeeName": "氏名",
+  "transportation": "電車",
+  "defaultPurpose": "通勤",
+  "receiptStatus": "有",
+  "oneWayLabel": "片",
+  "roundTripLabel": "往",
+  "statementDay": 30,
+  "routeFaresYen": {
+    "1": 0,
+    "2": 0
+  }
+}
