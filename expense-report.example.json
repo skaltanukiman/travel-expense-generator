@@ -1,6 +1,6 @@
 {
-  "templatePath": "C:\\path\\to\\交通費精算書テンプレート.xlsx",
-  "inputDirectory": "C:\\path\\to\\downloaded-receipts",
+  "templatePath": "./template/交通費精算書テンプレート.xlsx",
+  "inputDirectory": "./inputs",
   "outputDirectory": "./outputs",
   "sheetName": "交通費",
   "department": "所属名",

@@ -13,15 +13,17 @@ Copy-Item expense-report.example.json expense-report.json
 
 `expense-report.json`へテンプレート、個人情報、経路番号ごとの片道運賃を設定してください。このファイルはGit管理対象外です。
 
+テンプレートはプロジェクトルートの `template/交通費精算書テンプレート.xlsx`、ダウンロードしたJR九州領収書PDFは `inputs/` に配置します。`template/` と `inputs/` はGit管理対象外です。
+
 ## 実行
 
-設定ファイル内の入力フォルダーを使用:
+ルート配下の `template/` と `inputs/` を使用:
 
 ```powershell
 npm run generate -- --month 2026-05
 ```
 
-ダウンロードしたフォルダーを直接渡す:
+必要な場合は、入力フォルダーを一時的に変更できます。
 
 ```powershell
 npm run generate -- --input "C:\path\to\receipts" --month 2026-05

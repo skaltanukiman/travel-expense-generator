@@ -2,17 +2,19 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import type { ExpenseReportConfig } from "./domain.js";
 
-export async function loadConfig(configPath: string): Promise<ExpenseReportConfig> {
+export async function loadConfig(
+  configPath: string,
+  rootDirectory = process.cwd(),
+): Promise<ExpenseReportConfig> {
   const absoluteConfigPath = path.resolve(configPath);
   const raw = await readFile(absoluteConfigPath, "utf8");
   const config = JSON.parse(raw.replace(/^\uFEFF/u, "")) as ExpenseReportConfig;
-  const baseDirectory = path.dirname(absoluteConfigPath);
 
   return {
     ...config,
-    templatePath: resolveFrom(baseDirectory, config.templatePath),
-    inputDirectory: resolveFrom(baseDirectory, config.inputDirectory),
-    outputDirectory: resolveFrom(baseDirectory, config.outputDirectory),
+    templatePath: resolveFrom(rootDirectory, config.templatePath),
+    inputDirectory: resolveFrom(rootDirectory, config.inputDirectory),
+    outputDirectory: resolveFrom(rootDirectory, config.outputDirectory),
   };
 }
 

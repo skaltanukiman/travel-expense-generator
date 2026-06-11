@@ -2,6 +2,7 @@ node_modules/
 expense-report.json
 private/
 inputs/
+template/
 outputs/
 .verify/
 *.local.json
