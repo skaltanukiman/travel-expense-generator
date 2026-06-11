@@ -1,5 +1,6 @@
 node_modules/
 expense-report.json
+expense-report.jsonc
 private/
 inputs/
 template/

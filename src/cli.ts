@@ -24,7 +24,7 @@ export function parseArgs(argv = process.argv.slice(2)): CliArgs {
   }
 
   return {
-    configPath: values.get("--config") ?? path.resolve("expense-report.json"),
+    configPath: values.get("--config") ?? path.resolve("expense-report.jsonc"),
     inputDirectory: values.get("--input"),
     templatePath: values.get("--template"),
     outputPath: values.get("--output"),

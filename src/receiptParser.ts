@@ -14,7 +14,7 @@ export function parseReceiptFileName(
     throw new Error(`JR九州領収書のファイル名を解析できません: ${fileName}`);
   }
 
-  const [, year, month, day, routeNumberText, employeeName, purpose, from, to] = match;
+  const [, year, month, day, routeNumberText, employeeName, , from, to] = match;
   const routeNumber = Number(routeNumberText);
   const amountYen = config.routeFaresYen[String(routeNumber)];
   if (!Number.isInteger(amountYen) || amountYen <= 0) {
@@ -26,7 +26,7 @@ export function parseReceiptFileName(
     travelDate: `${year}-${month}-${day}`,
     routeNumber,
     employeeName: employeeName.trim(),
-    purpose: purpose.trim() || config.defaultPurpose,
+    purpose: config.defaultPurpose,
     from: normalizeStation(from),
     to: normalizeStation(to),
     amountYen,

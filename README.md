@@ -8,10 +8,10 @@ JR九州領収書PDFのファイル名を読み取り、会社指定の交通費
 
 ```powershell
 npm install
-Copy-Item expense-report.example.json expense-report.json
+Copy-Item expense-report.example.jsonc expense-report.jsonc
 ```
 
-`expense-report.json`へテンプレート、個人情報、経路番号ごとの片道運賃を設定してください。このファイルはGit管理対象外です。
+`expense-report.jsonc`へテンプレート、個人情報、用途、経路番号ごとの片道運賃を設定してください。このファイルはGit管理対象外です。JSONC形式のため、設定値の右側に `//` コメントを記載できます。
 
 テンプレートはプロジェクトルートの `template/交通費精算書テンプレート.xlsx`、ダウンロードしたJR九州領収書PDFは `inputs/` に配置します。`template/` と `inputs/` はGit管理対象外です。
 
@@ -54,7 +54,8 @@ npm run generate -- --input "C:\path\to\receipts" --template "C:\path\to\templat
 
 - ファイル名形式: `YYYYMMDD_経路番号氏名_費目 領収書_JR出発⇒到着.pdf`
 - 同日・同一区間の往路と復路は、往復1明細へ集約
-- 運賃は `expense-report.json` の `routeFaresYen` から取得
+- 用途欄（K～M列）には `expense-report.jsonc` の `defaultPurpose` を出力
+- 運賃は `expense-report.jsonc` の `routeFaresYen` から取得
 - 既存の同一交通機関の行だけを置換し、バスなど他の明細は保持
 - 小計式が対象としている安全な明細範囲 `9～28行` のみ使用
 - テンプレート構造が想定と異なる場合は出力を中止

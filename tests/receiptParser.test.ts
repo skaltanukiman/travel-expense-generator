@@ -29,7 +29,7 @@ describe("parseReceiptFileName", () => {
       travelDate: "2026-05-11",
       routeNumber: 1,
       employeeName: "山田 太郎",
-      purpose: "通勤費",
+      purpose: "通勤",
       from: "戸畑",
       to: "博多",
       amountYen: 1550,

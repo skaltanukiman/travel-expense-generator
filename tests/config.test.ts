@@ -9,10 +9,14 @@ describe("loadConfig", () => {
   it("テンプレートと入力フォルダーをプロジェクトルートから解決する", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-config-"));
     const configDirectory = path.join(directory, "private");
-    const configPath = path.join(configDirectory, "expense-report.json");
+    const configPath = path.join(configDirectory, "expense-report.jsonc");
     const projectRoot = path.join(directory, "project");
     await mkdir(configDirectory, { recursive: true });
-    await writeFile(configPath, JSON.stringify(createConfig()), "utf8");
+    await writeFile(
+      configPath,
+      `// 設定ファイルのコメント\n${JSON.stringify(createConfig())}`,
+      "utf8",
+    );
 
     try {
       const config = await loadConfig(configPath, projectRoot);
