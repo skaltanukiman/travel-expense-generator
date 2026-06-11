@@ -23,6 +23,21 @@ Copy-Item expense-report.example.json expense-report.json
 npm run generate -- --month 2026-05
 ```
 
+`--month YYYY-MM` は精算書へ出力する対象年月です。`inputs/` 内にある領収書PDFのうち、ファイル名の日付が指定年月に一致するものだけを出力し、精算書上部の年・月にも反映します。
+
+```text
+20260511_...pdf → --month 2026-05 の対象
+20260601_...pdf → --month 2026-05 の対象外
+```
+
+`inputs/` 内の領収書PDFがすべて同じ月の場合は、自動判定されるため `--month` を省略できます。
+
+```powershell
+npm run generate
+```
+
+複数月の領収書PDFが混在している場合は、`--month YYYY-MM` の指定が必要です。
+
 必要な場合は、入力フォルダーを一時的に変更できます。
 
 ```powershell
