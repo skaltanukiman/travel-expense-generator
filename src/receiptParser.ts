@@ -1,12 +1,17 @@
 import path from "node:path";
-import type { ExpenseReportConfig, ReceiptRecord, TravelExpenseItem } from "./domain.js";
+import type {
+  EachReceiptDateTransportationConfig,
+  ExpenseReportConfig,
+  ReceiptRecord,
+  ReceiptTransportationConfig,
+  TravelExpenseItem,
+} from "./domain.js";
 
 const receiptFilePattern =
   /^(\d{4})(\d{2})(\d{2})_(\d+)(.+?)_(.+?)\s*領収書_JR(.+?)(?:⇒|→|->)(.+)\.pdf$/iu;
 
 export function parseReceiptFileName(
   filePath: string,
-  config: ExpenseReportConfig,
 ): ReceiptRecord {
   const fileName = path.basename(filePath);
   const match = receiptFilePattern.exec(fileName);
@@ -16,31 +21,39 @@ export function parseReceiptFileName(
 
   const [, year, month, day, routeNumberText, employeeName, , from, to] = match;
   const routeNumber = Number(routeNumberText);
-  const amountYen = config.routeFaresYen[String(routeNumber)];
-  if (!Number.isInteger(amountYen) || amountYen <= 0) {
-    throw new Error(`経路番号 ${routeNumber} の運賃が設定されていません: ${fileName}`);
-  }
 
   return {
     sourceFileName: fileName,
     travelDate: `${year}-${month}-${day}`,
     routeNumber,
     employeeName: employeeName.trim(),
-    purpose: config.defaultPurpose,
     from: normalizeStation(from),
     to: normalizeStation(to),
-    amountYen,
   };
+}
+
+export function createTravelExpenseItems(
+  receipts: ReceiptRecord[],
+  config: ExpenseReportConfig,
+): TravelExpenseItem[] {
+  return config.transportations.flatMap((transportation) => {
+    if (!transportation.enabled) {
+      return [];
+    }
+    return transportation.source === "receipt"
+      ? groupReceipts(receipts, transportation)
+      : createEachReceiptDateItems(receipts, transportation);
+  });
 }
 
 export function groupReceipts(
   receipts: ReceiptRecord[],
-  config: ExpenseReportConfig,
+  transportation: ReceiptTransportationConfig,
 ): TravelExpenseItem[] {
   const groups = new Map<string, ReceiptRecord[]>();
   for (const receipt of receipts) {
     const stations = [receipt.from, receipt.to].sort((a, b) => a.localeCompare(b, "ja"));
-    const key = [receipt.travelDate, receipt.purpose, ...stations].join("\u0000");
+    const key = [receipt.travelDate, ...stations].join("\u0000");
     groups.set(key, [...(groups.get(key) ?? []), receipt]);
   }
 
@@ -56,13 +69,13 @@ export function groupReceipts(
 
       return {
         travelDate: first.travelDate,
-        transportation: config.transportation,
+        transportation: transportation.name,
         departure: first.from,
         arrival: first.to,
-        purpose: first.purpose || config.defaultPurpose,
+        purpose: transportation.purpose,
         tripType: hasReversePair ? "roundTrip" : "oneWay",
-        receiptStatus: config.receiptStatus,
-        amountYen: ordered.reduce((sum, item) => sum + item.amountYen, 0),
+        receiptStatus: transportation.receiptStatus,
+        amountYen: ordered.reduce((sum, item) => sum + fareForReceipt(item, transportation), 0),
         sourceFileNames: ordered.map((item) => item.sourceFileName),
       } satisfies TravelExpenseItem;
     })
@@ -71,6 +84,39 @@ export function groupReceipts(
       a.departure.localeCompare(b.departure, "ja") ||
       a.arrival.localeCompare(b.arrival, "ja")
     );
+}
+
+function createEachReceiptDateItems(
+  receipts: ReceiptRecord[],
+  transportation: EachReceiptDateTransportationConfig,
+): TravelExpenseItem[] {
+  const dates = [...new Set(receipts.map((receipt) => receipt.travelDate))].sort();
+  return dates.map((travelDate) => ({
+    travelDate,
+    transportation: transportation.name,
+    departure: transportation.departure,
+    arrival: transportation.arrival,
+    purpose: transportation.purpose,
+    tripType: transportation.tripType,
+    receiptStatus: transportation.receiptStatus,
+    amountYen: transportation.amountYen,
+    sourceFileNames: receipts
+      .filter((receipt) => receipt.travelDate === travelDate)
+      .map((receipt) => receipt.sourceFileName),
+  }));
+}
+
+function fareForReceipt(
+  receipt: ReceiptRecord,
+  transportation: ReceiptTransportationConfig,
+): number {
+  const amountYen = transportation.routeFaresYen[String(receipt.routeNumber)];
+  if (!Number.isInteger(amountYen) || amountYen <= 0) {
+    throw new Error(
+      `経路番号 ${receipt.routeNumber} の運賃が設定されていません: ${receipt.sourceFileName}`,
+    );
+  }
+  return amountYen;
 }
 
 function normalizeStation(value: string): string {

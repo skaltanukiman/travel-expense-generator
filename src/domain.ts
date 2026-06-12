@@ -3,10 +3,8 @@ export type ReceiptRecord = {
   travelDate: string;
   routeNumber: number;
   employeeName: string;
-  purpose: string;
   from: string;
   to: string;
-  amountYen: number;
 };
 
 export type TravelExpenseItem = {
@@ -21,6 +19,30 @@ export type TravelExpenseItem = {
   sourceFileNames: string[];
 };
 
+type BaseTransportationConfig = {
+  enabled: boolean;
+  name: string;
+  purpose: string;
+  receiptStatus: string;
+};
+
+export type ReceiptTransportationConfig = BaseTransportationConfig & {
+  source: "receipt";
+  routeFaresYen: Record<string, number>;
+};
+
+export type EachReceiptDateTransportationConfig = BaseTransportationConfig & {
+  source: "eachReceiptDate";
+  departure: string;
+  arrival: string;
+  tripType: TravelExpenseItem["tripType"];
+  amountYen: number;
+};
+
+export type TransportationConfig =
+  | ReceiptTransportationConfig
+  | EachReceiptDateTransportationConfig;
+
 export type ExpenseReportConfig = {
   templatePath: string;
   inputDirectory: string;
@@ -33,11 +55,8 @@ export type ExpenseReportConfig = {
   sheetName: string;
   department: string;
   employeeName: string;
-  transportation: string;
-  defaultPurpose: string;
-  receiptStatus: string;
+  transportations: TransportationConfig[];
   oneWayLabel: string;
   roundTripLabel: string;
   statementDay: number;
-  routeFaresYen: Record<string, number>;
 };

@@ -36,15 +36,17 @@ describe("generateExpenseWorkbook", () => {
 
       expect(result).toMatchObject({
         insertedRows: [9],
-        preservedRows: [13],
+        preservedRows: [14],
         totalYen: 3100,
-        subtotalYen: 3660,
+        subtotalYen: 4100,
       });
       expect(outputEntries.get("xl/worksheets/sheet2.xml")!.data)
         .toEqual(templateEntries.get("xl/worksheets/sheet2.xml")!.data);
       expect(outputTraffic).toContain('r="C9" s="1" t="inlineStr"');
       expect(outputTraffic).toContain("電車");
-      expect(outputTraffic).toContain("<v>3660</v>");
+      expect(outputTraffic).not.toContain(">バス<");
+      expect(outputTraffic).toContain("タクシー");
+      expect(outputTraffic).toContain("<v>4100</v>");
       expect(outputTraffic).toContain('<c r="C33" s="1" t="str"><f>L6</f><v>テスト</v></c>');
       validateTemplate(outputTraffic);
     } finally {
@@ -66,13 +68,30 @@ function createConfig(templatePath: string, outputDirectory: string): ExpenseRep
     sheetName: "交通費",
     department: "IT",
     employeeName: "テスト",
-    transportation: "電車",
-    defaultPurpose: "通勤",
-    receiptStatus: "有",
     oneWayLabel: "片",
     roundTripLabel: "往",
     statementDay: 30,
-    routeFaresYen: { "1": 1550, "2": 1550 },
+    transportations: [
+      {
+        enabled: true,
+        source: "receipt",
+        name: "電車",
+        purpose: "通勤",
+        receiptStatus: "有",
+        routeFaresYen: { "1": 1550, "2": 1550 },
+      },
+      {
+        enabled: false,
+        source: "eachReceiptDate",
+        name: "バス",
+        departure: "一枝入口",
+        arrival: "戸畑駅",
+        purpose: "通勤",
+        tripType: "roundTrip",
+        receiptStatus: "無",
+        amountYen: 560,
+      },
+    ],
   };
 }
 
@@ -107,6 +126,12 @@ function createTemplateEntries(): ZipEntry[] {
         }
         if (row === 13 && column === "P") {
           return numberCell(`${column}${row}`, 560);
+        }
+        if (row === 14 && column === "C") {
+          return stringCell(`${column}${row}`, "タクシー");
+        }
+        if (row === 14 && column === "P") {
+          return numberCell(`${column}${row}`, 1000);
         }
         return cell(`${column}${row}`);
       }).join("");

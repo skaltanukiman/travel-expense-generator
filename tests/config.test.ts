@@ -45,12 +45,9 @@ function createConfig(): ExpenseReportConfig {
     sheetName: "交通費",
     department: "IT",
     employeeName: "山田 太郎",
-    transportation: "電車",
-    defaultPurpose: "通勤",
-    receiptStatus: "有",
     oneWayLabel: "片",
     roundTripLabel: "往",
     statementDay: 30,
-    routeFaresYen: { "1": 1550, "2": 1550 },
+    transportations: [],
   };
 }

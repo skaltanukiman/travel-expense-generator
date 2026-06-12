@@ -39,11 +39,14 @@ export async function generateExpenseWorkbook(
   validateTemplate(sheetXml);
 
   const sharedStrings = readSharedStrings(entryMap.get("xl/sharedStrings.xml")?.data);
+  const configuredTransportations = new Set(
+    config.transportations.map((transportation) => transportation.name),
+  );
   const targetRows: number[] = [];
   const preservedRows: number[] = [];
   for (let row = detailStartRow; row <= allDetailEndRow; row += 1) {
     const transportation = readCellText(sheetXml, `C${row}`, sharedStrings).trim();
-    if (transportation === config.transportation) {
+    if (configuredTransportations.has(transportation)) {
       targetRows.push(row);
     } else if (transportation) {
       preservedRows.push(row);

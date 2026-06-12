@@ -10,14 +10,31 @@
   "sheetName": "交通費",                                     // 明細を書き込むExcelシート名
   "department": "所属名",                                    // 精算書上部の「所属」欄
   "employeeName": "氏名",                                    // 精算書上部の「氏名」欄。実値はexpense-report.jsoncに設定
-  "transportation": "電車",                                  // 交通機関欄（C～D列）。既存明細を置換するときの識別にも使用
-  "defaultPurpose": "通勤",                                  // 用途欄（K～M列）へ出力する固定値
-  "receiptStatus": "有",                                     // 領収書欄（O列）
   "oneWayLabel": "片",                                       // 片道明細の片/往欄（N列）
   "roundTripLabel": "往",                                    // 往復明細の片/往欄（N列）
   "statementDay": 30,                                        // 精算書上部の日。年と月は対象明細から決定
-  "routeFaresYen": {                                         // PDFファイル名に含まれる経路番号ごとの片道運賃（円）
-    "1": 0,                                                  // 経路番号1
-    "2": 0                                                   // 経路番号2
-  }
+  "transportations": [                                       // 出力する交通機関。要素を追加すると交通機関を増やせます
+    {
+      "enabled": true,                                       // falseにすると電車を出力しません
+      "source": "receipt",                                   // 領収書PDFから明細を生成
+      "name": "電車",                                        // 交通機関欄（C～D列）
+      "purpose": "通勤",                                     // 用途欄（K～M列）
+      "receiptStatus": "有",                                 // 領収書欄（O列）
+      "routeFaresYen": {                                     // PDFファイル名に含まれる経路番号ごとの片道運賃（円）
+        "1": 0,
+        "2": 0
+      }
+    },
+    {
+      "enabled": true,                                       // falseにするとバスを出力しません
+      "source": "eachReceiptDate",                           // 領収書がある日付ごとに1明細を生成
+      "name": "バス",
+      "departure": "一枝入口",
+      "arrival": "戸畑駅",
+      "purpose": "通勤",
+      "tripType": "roundTrip",                               // roundTrip: 往復、oneWay: 片道
+      "receiptStatus": "無",
+      "amountYen": 560                                       // 1日分の金額（円）
+    }
+  ]
 }
