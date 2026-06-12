@@ -6,6 +6,11 @@ const config: ExpenseReportConfig = {
   templatePath: "template.xlsx",
   inputDirectory: "inputs",
   outputDirectory: "outputs",
+  outputFileName: {
+    name: "テスト",
+    documentName: "経費交通費精算書",
+    version: "ver.4",
+  },
   sheetName: "交通費",
   department: "IT",
   employeeName: "テスト",

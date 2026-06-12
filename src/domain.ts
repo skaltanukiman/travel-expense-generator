@@ -25,6 +25,11 @@ export type ExpenseReportConfig = {
   templatePath: string;
   inputDirectory: string;
   outputDirectory: string;
+  outputFileName: {
+    name: string;
+    documentName: string;
+    version: string;
+  };
   sheetName: string;
   department: string;
   employeeName: string;

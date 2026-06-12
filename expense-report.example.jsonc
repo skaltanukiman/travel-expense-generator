@@ -2,6 +2,11 @@
   "templatePath": "./template/交通費精算書テンプレート.xlsx", // 使用するExcelテンプレート。プロジェクトルートからの相対パス
   "inputDirectory": "./inputs",                              // JR九州領収書PDFを配置するフォルダー
   "outputDirectory": "./outputs",                            // 生成した交通費精算書を保存するフォルダー
+  "outputFileName": {                                        // 出力名: 名前_YYYYMM ドキュメント名バージョン.xlsx
+    "name": "氏名",                                          // ファイル名へ出力する名前
+    "documentName": "経費交通費精算書",                       // ファイル名へ出力するドキュメント名
+    "version": "ver.4"                                       // ファイル名へ出力するバージョン
+  },
   "sheetName": "交通費",                                     // 明細を書き込むExcelシート名
   "department": "所属名",                                    // 精算書上部の「所属」欄
   "employeeName": "氏名",                                    // 精算書上部の「氏名」欄。実値はexpense-report.jsoncに設定

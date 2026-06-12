@@ -2,6 +2,7 @@ import { mkdir, readdir } from "node:fs/promises";
 import path from "node:path";
 import { parseArgs } from "./cli.js";
 import { loadConfig } from "./config.js";
+import type { ExpenseReportConfig } from "./domain.js";
 import { generateExpenseWorkbook } from "./ooxml.js";
 import { groupReceipts, parseReceiptFileName } from "./receiptParser.js";
 
@@ -25,7 +26,7 @@ export async function main(): Promise<void> {
 
   const outputPath = args.outputPath
     ? path.resolve(args.outputPath)
-    : path.join(config.outputDirectory, `交通費精算書_${month}.xlsx`);
+    : path.join(config.outputDirectory, buildOutputFileName(config, month));
   await mkdir(path.dirname(outputPath), { recursive: true });
   const result = await generateExpenseWorkbook(config, items, outputPath);
 
@@ -34,6 +35,11 @@ export async function main(): Promise<void> {
   console.log(`JR九州明細合計: ${result.totalYen.toLocaleString("ja-JP")} 円`);
   console.log(`精算書小計: ${result.subtotalYen.toLocaleString("ja-JP")} 円`);
   console.log(`保持した既存明細行: ${result.preservedRows.join(", ") || "なし"}`);
+}
+
+export function buildOutputFileName(config: ExpenseReportConfig, month: string): string {
+  const { name, documentName, version } = config.outputFileName;
+  return `${name}_${month.replace("-", "")} ${documentName}${version}.xlsx`;
 }
 
 function inferMonth(dates: string[]): string {

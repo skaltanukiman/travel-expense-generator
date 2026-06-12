@@ -34,6 +34,9 @@ Copy-Item expense-report.example.jsonc expense-report.jsonc
 | `templatePath` | 使用するExcelテンプレートのパス |
 | `inputDirectory` | 領収書PDFを配置するフォルダー |
 | `outputDirectory` | 生成した精算書を保存するフォルダー |
+| `outputFileName.name` | 出力ファイル名へ使用する名前 |
+| `outputFileName.documentName` | 出力ファイル名へ使用するドキュメント名 |
+| `outputFileName.version` | 出力ファイル名へ使用するバージョン |
 | `sheetName` | 明細を書き込むシート名 |
 | `department` | 精算書上部へ出力する所属名 |
 | `employeeName` | 精算書上部と精算者欄へ出力する氏名 |
@@ -77,8 +80,10 @@ npm run generate -- --month 2026-05
 `inputs/` 内のPDFから、ファイル名の日付が指定年月に一致する明細だけを出力します。既定の出力先は次のとおりです。出力フォルダーが存在しない場合は自動的に作成されます。
 
 ```text
-outputs/交通費精算書_2026-05.xlsx
+outputs/林 勇希_202605 経費交通費精算書ver.4.xlsx
 ```
+
+既定のファイル名は、`outputFileName` の設定値と対象月から `名前_YYYYMM ドキュメント名バージョン.xlsx` の形式で生成します。
 
 入力フォルダー内の領収書がすべて同じ月の場合は、`--month` を省略できます。
 
@@ -95,7 +100,7 @@ npm run generate
 | `--config` | 設定ファイルのパス | `expense-report.jsonc` |
 | `--input` | 入力フォルダーを一時的に上書き | 設定の `inputDirectory` |
 | `--template` | Excelテンプレートを一時的に上書き | 設定の `templatePath` |
-| `--output` | 出力ファイルのパスを指定 | `outputDirectory/交通費精算書_YYYY-MM.xlsx` |
+| `--output` | 出力ファイルのパスを指定 | `outputDirectory/名前_YYYYMM ドキュメント名バージョン.xlsx` |
 | `--month` | 出力対象月を `YYYY-MM` 形式で指定 | 入力PDFの日付から自動判定 |
 
 実行例:

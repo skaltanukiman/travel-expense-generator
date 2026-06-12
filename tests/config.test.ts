@@ -37,6 +37,11 @@ function createConfig(): ExpenseReportConfig {
     templatePath: "./template/交通費精算書テンプレート.xlsx",
     inputDirectory: "./inputs",
     outputDirectory: "./outputs",
+    outputFileName: {
+      name: "山田 太郎",
+      documentName: "経費交通費精算書",
+      version: "ver.4",
+    },
     sheetName: "交通費",
     department: "IT",
     employeeName: "山田 太郎",
