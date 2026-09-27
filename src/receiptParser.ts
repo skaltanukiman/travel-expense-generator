@@ -32,18 +32,48 @@ export function parseReceiptFileName(
   };
 }
 
+export type CreateTravelExpenseItemsResult = {
+  items: TravelExpenseItem[];
+  acceptedReceipts: ReceiptRecord[];
+  skippedReceipts: ReceiptRecord[];
+};
+
 export function createTravelExpenseItems(
   receipts: ReceiptRecord[],
   config: ExpenseReportConfig,
-): TravelExpenseItem[] {
-  return config.transportations.flatMap((transportation) => {
+): CreateTravelExpenseItemsResult {
+  const receiptTransportations = config.transportations.filter(
+    (transportation): transportation is ReceiptTransportationConfig =>
+      transportation.enabled && transportation.source === "receipt",
+  );
+  const acceptedReceipts: ReceiptRecord[] = [];
+  const skippedReceipts: ReceiptRecord[] = [];
+  for (const receipt of receipts) {
+    const accepted = receiptTransportations.some((transportation) =>
+      hasConfiguredRoute(receipt, transportation)
+    );
+    (accepted ? acceptedReceipts : skippedReceipts).push(receipt);
+  }
+
+  const items = config.transportations.flatMap((transportation) => {
     if (!transportation.enabled) {
       return [];
     }
     return transportation.source === "receipt"
-      ? groupReceipts(receipts, transportation)
-      : createEachReceiptDateItems(receipts, transportation);
+      ? groupReceipts(
+        acceptedReceipts.filter((receipt) => hasConfiguredRoute(receipt, transportation)),
+        transportation,
+      )
+      : createEachReceiptDateItems(acceptedReceipts, transportation);
   });
+  return { items, acceptedReceipts, skippedReceipts };
+}
+
+function hasConfiguredRoute(
+  receipt: ReceiptRecord,
+  transportation: ReceiptTransportationConfig,
+): boolean {
+  return Object.hasOwn(transportation.routeFaresYen, String(receipt.routeNumber));
 }
 
 export function groupReceipts(
@@ -113,7 +143,7 @@ function fareForReceipt(
   const amountYen = transportation.routeFaresYen[String(receipt.routeNumber)];
   if (!Number.isInteger(amountYen) || amountYen <= 0) {
     throw new Error(
-      `経路番号 ${receipt.routeNumber} の運賃が設定されていません: ${receipt.sourceFileName}`,
+      `経路番号 ${receipt.routeNumber} の運賃は正の整数で設定してください: ${receipt.sourceFileName}`,
     );
   }
   return amountYen;

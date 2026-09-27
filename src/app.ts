@@ -22,7 +22,17 @@ export async function main(): Promise<void> {
   const receipts = files.map((file) => parseReceiptFileName(file));
   const month = args.month ?? inferMonth(receipts.map((receipt) => receipt.travelDate));
   const targetReceipts = receipts.filter((receipt) => receipt.travelDate.startsWith(`${month}-`));
-  const items = createTravelExpenseItems(targetReceipts, config);
+  const { items, acceptedReceipts, skippedReceipts } = createTravelExpenseItems(targetReceipts, config);
+  if (skippedReceipts.length > 0) {
+    console.warn("警告: 設定外の経路のため交通費精算対象から除外しました:");
+    for (const receipt of skippedReceipts) {
+      console.warn(`  ${receipt.sourceFileName}`);
+    }
+  }
+  if (acceptedReceipts.length === 0) {
+    printReceiptCounts(targetReceipts.length, acceptedReceipts.length, skippedReceipts.length);
+    throw new Error("交通費精算対象となる領収書がありません。");
+  }
 
   const outputPath = args.outputPath
     ? path.resolve(args.outputPath)
@@ -31,10 +41,19 @@ export async function main(): Promise<void> {
   const result = await generateExpenseWorkbook(config, items, outputPath);
 
   console.log(`出力しました: ${result.outputPath}`);
-  console.log(`JR九州領収書: ${targetReceipts.length} 件 / 精算書明細: ${items.length} 件`);
+  printReceiptCounts(targetReceipts.length, acceptedReceipts.length, skippedReceipts.length);
+  console.log(`精算書明細: ${items.length} 件`);
   console.log(`生成明細合計: ${result.totalYen.toLocaleString("ja-JP")} 円`);
   console.log(`精算書小計: ${result.subtotalYen.toLocaleString("ja-JP")} 円`);
   console.log(`保持した既存明細行: ${result.preservedRows.join(", ") || "なし"}`);
+}
+
+function printReceiptCounts(total: number, accepted: number, skipped: number): void {
+  console.log(`JR九州領収書: ${total} 件`);
+  console.log(`交通費精算対象: ${accepted} 件`);
+  if (skipped > 0) {
+    console.log(`交通費精算対象外: ${skipped} 件`);
+  }
 }
 
 export function buildOutputFileName(config: ExpenseReportConfig, month: string): string {
