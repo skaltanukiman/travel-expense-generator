@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,6 +19,146 @@ describe("buildOutputFileName", () => {
 });
 
 describe("CLI", () => {
+  it.each([
+    [undefined, [13, 23, 25, 26]], ["", [13, 23, 25, 26]],
+    ["23", [13, 25, 26]], ["13,23,25", [26]],
+    [" 13 , 23 , 25 ", [26]], ["23,23,25", [13, 26]], ["1", [13, 23, 25, 26]],
+  ])("除外日 %s をJR往復・バス・金額へ反映し、PDFを保持する", async (excludeDays, expectedDays) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
+    try {
+      const fileNames = [13, 23, 25, 26].flatMap((day) => commuteFileNames(`202609${day}`));
+      const config = await prepareCliInputs(directory, fileNames);
+      await writeFile(config.templatePath, writeZip(createTemplateEntries()));
+      const result = runCli(directory, ["--month", "2026-09", ...(excludeDays === undefined ? [] : ["--exclude-days", excludeDays])]);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain(`日付指定による除外: ${(4 - expectedDays.length) * 2} 件`);
+      expect(result.stdout).toContain(`交通費精算対象: ${expectedDays.length * 2} 件`);
+      expect(result.stdout).toContain(`精算書明細: ${expectedDays.length * 2} 件`);
+      expect(result.stdout).toContain(`生成明細合計: ${(expectedDays.length * 3660).toLocaleString("ja-JP")} 円`);
+      expect(result.stdout).toContain(`精算書小計: ${(expectedDays.length * 3660 + 1000).toLocaleString("ja-JP")} 円`);
+      if (excludeDays?.trim()) {
+        const days = [...new Set(excludeDays.split(",").map(Number))];
+        expect(result.stdout).toContain(`交通費精算から除外する日: ${days.map((day) => `${day}日`).join(", ")}`);
+      }
+      const outputPath = path.join(config.outputDirectory, buildOutputFileName(config, "2026-09"));
+      const entries = zipEntryMap(readZip(await readFile(outputPath)));
+      const traffic = entries.get("xl/worksheets/sheet1.xml")!.data.toString("utf8");
+      for (const day of [13, 23, 25, 26]) {
+        const serial = (Date.UTC(2026, 8, day) - Date.UTC(1899, 11, 30)) / 86_400_000;
+        expect(traffic.split(`<v>${serial}</v>`).length - 1).toBe(expectedDays.includes(day) ? 2 : 0);
+      }
+      expect(traffic.match(/>電車</gu)).toHaveLength(expectedDays.length);
+      expect(traffic.match(/>バス</gu)).toHaveLength(expectedDays.length);
+      expect(entries.get("xl/worksheets/sheet2.xml")!.data).toEqual(createTemplateEntries()[3].data);
+      expect((await readdir(config.inputDirectory)).sort()).toEqual(fileNames.sort());
+      for (const fileName of fileNames) {
+        expect(await readFile(path.join(config.inputDirectory, fileName), "utf8")).toBe("");
+      }
+    } finally {
+      await removeTestDirectory(directory);
+    }
+  });
+
+  it("日付除外を設定外経路より先に分類し、他の月は数えない", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
+    try {
+      const config = await prepareCliInputs(directory, [
+        ...commuteFileNames("20260913"), ...commuteFileNames("20260923"),
+        ...travelFileNames("20260923"), ...travelFileNames("20260925"),
+        ...commuteFileNames("20260926"), ...commuteFileNames("20260823"),
+      ]);
+      await writeFile(config.templatePath, writeZip(createTemplateEntries()));
+      const result = runCli(directory, ["--month", "2026-09", "--exclude-days", "23"]);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("JR九州領収書: 10 件");
+      expect(result.stdout).toContain("日付指定による除外: 4 件");
+      expect(result.stdout).toContain("設定外経路による除外: 2 件");
+      expect(result.stdout).toContain("交通費精算対象: 4 件");
+      for (const fileName of [...commuteFileNames("20260923"), ...travelFileNames("20260923")]) {
+        expect(result.stdout).toContain(fileName);
+        expect(result.stderr).not.toContain(fileName);
+      }
+      for (const fileName of travelFileNames("20260925")) {
+        expect(result.stderr).toContain(fileName);
+      }
+      expect(result.stdout + result.stderr).not.toContain("20260823");
+    } finally {
+      await removeTestDirectory(directory);
+    }
+  });
+
+  it.each([false, true])("全件日付除外ならExcelを生成・上書きしない（既存出力: %s）", async (existingOutput) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
+    try {
+      const files = commuteFileNames("20260923");
+      const config = await prepareCliInputs(directory, files);
+      const outputPath = path.join(config.outputDirectory, buildOutputFileName(config, "2026-09"));
+      if (existingOutput) {
+        await mkdir(config.outputDirectory);
+        await writeFile(outputPath, "existing workbook");
+      }
+      // 月を除外前に推測し、テンプレートを開く前に終了する。
+      const result = runCli(directory, ["--exclude-days", "23"]);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("日付指定による除外後、交通費精算対象となる領収書がありません。");
+      expect(result.stdout).toContain("日付指定による除外: 2 件");
+      expect(result.stdout).toContain("交通費精算対象: 0 件");
+      expect(result.stdout).not.toContain("出力しました:");
+      if (existingOutput) {
+        expect(await readFile(outputPath, "utf8")).toBe("existing workbook");
+      } else {
+        expect(existsSync(config.outputDirectory)).toBe(false);
+      }
+      expect((await readdir(config.inputDirectory)).sort()).toEqual(files.sort());
+    } finally {
+      await removeTestDirectory(directory);
+    }
+  });
+
+  it("日付除外後に設定外経路のみ残る場合もExcelを生成しない", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
+    try {
+      const config = await prepareCliInputs(directory, [...commuteFileNames("20260913"), ...travelFileNames()]);
+      const result = runCli(directory, ["--month", "2026-09", "--exclude-days", "13"]);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("交通費精算対象となる領収書がありません。");
+      expect(result.stdout).toContain("日付指定による除外: 2 件");
+      expect(result.stdout).toContain("設定外経路による除外: 2 件");
+      expect(result.stdout).toContain("交通費精算対象: 0 件");
+      expect(existsSync(config.outputDirectory)).toBe(false);
+    } finally {
+      await removeTestDirectory(directory);
+    }
+  });
+
+  it.each([true, false])("指定月／推測月の日数で検証する（月指定: %s）", async (explicitMonth) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
+    try {
+      const config = await prepareCliInputs(directory, commuteFileNames("20270213"));
+      const result = runCli(directory, [...(explicitMonth ? ["--month", "2027-02"] : []), "--exclude-days", "29"]);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("2027年2月に29日は存在しません。");
+      expect(existsSync(config.outputDirectory)).toBe(false);
+    } finally {
+      await removeTestDirectory(directory);
+    }
+  });
+
+  it("月指定なしでも閏年の日付を除外して残った日のExcelを生成する", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
+    try {
+      const config = await prepareCliInputs(directory, [...commuteFileNames("20280213"), ...commuteFileNames("20280229")]);
+      await writeFile(config.templatePath, writeZip(createTemplateEntries()));
+      const result = runCli(directory, ["--exclude-days", "29"]);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.stdout).toContain("日付指定による除外: 2 件");
+      expect(result.stdout).toContain("精算書明細: 2 件");
+      expect(existsSync(path.join(config.outputDirectory, buildOutputFileName(config, "2028-02")))).toBe(true);
+    } finally {
+      await removeTestDirectory(directory);
+    }
+  });
+
   it("8件中設定外の2件を警告し、正常な6件からExcelを生成する", async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), "travel-expense-cli-"));
     try {
@@ -152,11 +292,11 @@ async function prepareCliInputs(directory: string, fileNames: string[]): Promise
   return config;
 }
 
-function runCli(directory: string) {
+function runCli(directory: string, args: string[] = ["--month", "2026-09"]) {
   const projectRoot = fileURLToPath(new URL("../", import.meta.url));
   return spawnSync(process.execPath, [
     "--import", "tsx", path.join(projectRoot, "src", "index.ts"),
-    "--config", path.join(directory, "expense-report.jsonc"), "--month", "2026-09",
+    "--config", path.join(directory, "expense-report.jsonc"), ...args,
   ], { cwd: projectRoot, encoding: "utf8", timeout: 10_000, windowsHide: true });
 }
 

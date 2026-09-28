@@ -1,4 +1,5 @@
 import path from "node:path";
+import { parseExcludeDays } from "./excludeDays.js";
 
 export type CliArgs = {
   configPath: string;
@@ -6,6 +7,7 @@ export type CliArgs = {
   templatePath?: string;
   outputPath?: string;
   month?: string;
+  excludeDays?: number[];
 };
 
 export function parseArgs(argv = process.argv.slice(2)): CliArgs {
@@ -16,7 +18,7 @@ export function parseArgs(argv = process.argv.slice(2)): CliArgs {
       throw new Error(`不明な引数です: ${key}`);
     }
     const value = argv[index + 1];
-    if (!value || value.startsWith("--")) {
+    if (value === undefined || value.startsWith("--") || (value === "" && key !== "--exclude-days")) {
       throw new Error(`${key} の値がありません。`);
     }
     values.set(key, value);
@@ -29,5 +31,6 @@ export function parseArgs(argv = process.argv.slice(2)): CliArgs {
     templatePath: values.get("--template"),
     outputPath: values.get("--output"),
     month: values.get("--month"),
+    excludeDays: parseExcludeDays(values.get("--exclude-days") ?? ""),
   };
 }
